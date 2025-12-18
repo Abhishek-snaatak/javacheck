@@ -15,20 +15,18 @@ pipeline {
             }
         }
 
-        stage('Dependency Scan') {
-            steps {
-                withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
-                    sh '''
-                      mvn -DskipTests \
-                          org.owasp:dependency-check-maven:check \
-                          -DnvdApiKey=$NVD_API_KEY \
-                          -Dformat=ALL \
-                          -DoutputDirectory=target/dependency-check-report
-                    '''
-                }
-            }
+stage('Dependency Scan') {
+    steps {
+        withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
+            sh """mvn org.owasp:dependency-check-maven:check \
+                   -DnvdApiKey=$NVD_API_KEY \
+                   -DskipTests \
+                   -Dformat=ALL \
+                   -DoutputDirectory=target/dependency-check-report"""
         }
     }
+}
+
 
     post {
         success {
