@@ -7,7 +7,8 @@ pipeline {
     }
 
     environment {
-        NVD_API_KEY = credentials('nvd-api-key') // Store API key in Jenkins credentials
+        NVD_API_KEY = credentials('nvd-api-key')
+        SLACK_WEBHOOK_URL = credentials('slack-webhook')
     }
 
     stages {
@@ -20,12 +21,13 @@ pipeline {
 
         stage('Dependency Scan') {
             steps {
-                sh '''
+                // Correctly pass the API key to Maven
+                sh '''#!/bin/bash
                     mvn org.owasp:dependency-check-maven:check \
-                        -DnvdApiKey=$NVD_API_KEY \
+                        -DnvdApiKey="${NVD_API_KEY}" \
                         -DskipTests \
                         -Dformat=ALL \
-                        -DoutputDirectory=target/dependency-check-report
+                        -DoutputDirectory="target/dependency-check-report"
                 '''
             }
         }
@@ -38,20 +40,18 @@ pipeline {
                 def msg = """✅ BUILD SUCCESS:
 • Job: ${env.JOB_NAME}
 • Build Number: #${env.BUILD_NUMBER}
-• Triggered By: Jenkins
 • Time (IST): ${timestamp}
 • Build URL: ${env.BUILD_URL}
 • Report Path: ${WORKSPACE}/target/dependency-check-report
 """
-                withCredentials([string(credentialsId: 'slack-webhook', variable: 'SLACK_WEBHOOK_URL')]) {
-                    def payload = groovy.json.JsonOutput.toJson([text: msg])
-                    sh """
-                        curl -s -X POST \
-                        -H "Content-Type: application/json" \
-                        --data '\$payload' \
-                        "\$SLACK_WEBHOOK_URL"
-                    """
-                }
+                // Slack notification
+                sh """#!/bin/bash
+                    curl -s -X POST \
+                        -H 'Content-Type: application/json' \
+                        --data "{\\"text\\": \\"${msg}\\":}" \
+                        "${SLACK_WEBHOOK_URL}"
+                """
+                // Email notification
                 mail to: 'ps191701@gmail.com',
                      subject: "✅ BUILD SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                      body: msg
@@ -64,19 +64,15 @@ pipeline {
                 def msg = """❌ BUILD FAILURE:
 • Job: ${env.JOB_NAME}
 • Build Number: #${env.BUILD_NUMBER}
-• Triggered By: Jenkins
 • Time (IST): ${timestamp}
 • Build URL: ${env.BUILD_URL}
 """
-                withCredentials([string(credentialsId: 'slack-webhook', variable: 'SLACK_WEBHOOK_URL')]) {
-                    def payload = groovy.json.JsonOutput.toJson([text: msg])
-                    sh """
-                        curl -s -X POST \
-                        -H "Content-Type: application/json" \
-                        --data '\$payload' \
-                        "\$SLACK_WEBHOOK_URL"
-                    """
-                }
+                sh """#!/bin/bash
+                    curl -s -X POST \
+                        -H 'Content-Type: application/json' \
+                        --data "{\\"text\\": \\"${msg}\\"}" \
+                        "${SLACK_WEBHOOK_URL}"
+                """
                 mail to: 'ps191701@gmail.com',
                      subject: "❌ BUILD FAILURE: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                      body: msg
