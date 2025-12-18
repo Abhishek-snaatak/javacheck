@@ -6,6 +6,10 @@ pipeline {
         maven 'maven'
     }
 
+    environment {
+        NVD_API_KEY = credentials('nvd-api-key') // Store API key in Jenkins credentials
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -16,16 +20,13 @@ pipeline {
 
         stage('Dependency Scan') {
             steps {
-                // Use NVD API Key securely
-                withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
-                    sh '''
-                        mvn org.owasp:dependency-check-maven:check \
-                            -DnvdApiKey=$NVD_API_KEY \
-                            -DskipTests \
-                            -Dformat=ALL \
-                            -DoutputDirectory=target/dependency-check-report
-                    '''
-                }
+                sh '''
+                    mvn org.owasp:dependency-check-maven:check \
+                        -DnvdApiKey=$NVD_API_KEY \
+                        -DskipTests \
+                        -Dformat=ALL \
+                        -DoutputDirectory=target/dependency-check-report
+                '''
             }
         }
     }
