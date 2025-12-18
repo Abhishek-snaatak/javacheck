@@ -15,18 +15,18 @@ pipeline {
             }
         }
 
-stage('Dependency Scan') {
-    steps {
-        withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
-            sh """mvn org.owasp:dependency-check-maven:check \
-                   -DnvdApiKey=$NVD_API_KEY \
-                   -DskipTests \
-                   -Dformat=ALL \
-                   -DoutputDirectory=target/dependency-check-report"""
+        stage('Dependency Scan') {
+            steps {
+                withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
+                    sh """mvn org.owasp:dependency-check-maven:check \
+                           -DnvdApiKey=$NVD_API_KEY \
+                           -DskipTests \
+                           -Dformat=ALL \
+                           -DoutputDirectory=target/dependency-check-report"""
+                }
+            }
         }
     }
-}
-
 
     post {
         success {
@@ -59,6 +59,7 @@ stage('Dependency Scan') {
                      body: msg
             }
         }
+
         failure {
             script {
                 def timestamp = sh(
@@ -88,6 +89,7 @@ stage('Dependency Scan') {
                      body: msg
             }
         }
+
         always {
             echo "Archiving Dependency Check Reports..."
             archiveArtifacts artifacts: 'target/dependency-check-report/**', allowEmptyArchive: true
